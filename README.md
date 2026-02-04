@@ -20,5 +20,23 @@ It takes a resume PDF as input, parses it using an LLM, fetches live job listing
 4. Live jobs are fetched from Naukri
 5. One consolidated email is sent to the user
 
+## Credentials Setup (Required)
+
+This workflow does NOT include credentials.
+
+Before running:
+- Create Google Drive OAuth credential in n8n
+- Create Google Sheets OAuth credential
+- Create Gmail OAuth credential
+- Add OpenRouter API key
+- Add Apify API token
+
+Replace placeholders:
+- {{OPENROUTER_API_KEY}}
+- {{APIFY_API_TOKEN}}
+
+No secrets are stored in this repository.
+
+
 ⚠️ API keys are not included. Configure credentials inside n8n.
 
