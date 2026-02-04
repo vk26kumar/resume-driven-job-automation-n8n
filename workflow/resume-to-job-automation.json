@@ -1,1 +1,602 @@
-
+{
+  "name": "Resume Job Matching Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1y50lbcrQZu3coPmmuXkxUFFV8sN6CMrG",
+          "mode": "list",
+          "cachedResultName": "Resume Upload",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1y50lbcrQZu3coPmmuXkxUFFV8sN6CMrG"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -112
+      ],
+      "id": "9a91eaaf-4f2e-4300-ac1f-25c4635321f0",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Demo_API",
+          "name": "APP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json[\"id\"]}}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        384,
+        -112
+      ],
+      "id": "7f4ebe4b-be6b-4e56-8eb3-2e937dc159a7",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Demo_API",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        544,
+        -112
+      ],
+      "id": "c6be095d-aefc-4c6f-9eb5-cea1aa87995d",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Demo_API"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "https://n8n.io"
+            },
+            {
+              "name": "X-Title",
+              "value": "Resume Parser"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a professional resume parser. Use ONLY the provided resume text. Return ONLY valid JSON.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ $node[\"Extract from File\"].json[\"text\"].toJsonString() }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        704,
+        -112
+      ],
+      "id": "999afd09-8bcb-4ce5-b39a-627a30917db4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Use $input.item.json for more reliable data access in newer n8n versions\nlet content = $input.item.json.choices[0].message.content;\n\n// 2. Clean the markdown formatting\ncontent = content\n  .replace(/```json/gi, '')\n  .replace(/```/g, '')\n  .trim();\n\nlet parsed;\n\ntry {\n  // 3. Parse the string into a JS Object\n  parsed = JSON.parse(content);\n  \n  // 4. Force check: if for some reason it's still a string, parse it again\n  if (typeof parsed === 'string') {\n    parsed = JSON.parse(parsed);\n  }\n} catch (e) {\n  throw new Error(\"AI response is not valid JSON:\\n\" + content);\n}\n\n// 5. Final validation before returning to n8n\nif (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {\n  throw new Error(\"The parsed output must be a JSON object ({}). Received: \" + typeof parsed);\n}\n\nreturn [\n  {\n    json: parsed\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -304
+      ],
+      "id": "c0e4fc19-e304-4cc9-9bf2-1b9097d35499",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "19f7a63CR5yaZf32Z_R2tlL2skZGFvAIUMSBpb6-5yCg",
+          "mode": "list",
+          "cachedResultName": "Resume Skills Output",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19f7a63CR5yaZf32Z_R2tlL2skZGFvAIUMSBpb6-5yCg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19f7a63CR5yaZf32Z_R2tlL2skZGFvAIUMSBpb6-5yCg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Primary Role": "={{ $json.primary_role }}",
+            "Experience": "={{ $json.years_of_experience }}",
+            "Education": "={{ $json.education }}",
+            "Programming Languages": "={{ $json.programming_languages }}",
+            "UI Frameworks": "={{ $json.ui_frameworks }}",
+            "Tools": "={{ $json.tools_platforms }}",
+            "DevOps": "={{ $json.devops_deployment_tools }}",
+            "Curriculum": "={{ $json.curriculum }}",
+            "Interests": "={{ $json.interests }}",
+            "Match Score": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Primary Role",
+              "displayName": "Primary Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Education",
+              "displayName": "Education",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Programming Languages",
+              "displayName": "Programming Languages",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DS / ML",
+              "displayName": "DS / ML",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Libraries & Frameworks",
+              "displayName": "Libraries & Frameworks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "UI Frameworks",
+              "displayName": "UI Frameworks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tools",
+              "displayName": "Tools",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "DevOps",
+              "displayName": "DevOps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Curriculum",
+              "displayName": "Curriculum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Interests",
+              "displayName": "Interests",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Job Description",
+              "displayName": "Job Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Match Score",
+              "displayName": "Match Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Matched Skills",
+              "displayName": "Matched Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Missing Skills",
+              "displayName": "Missing Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        944,
+        48
+      ],
+      "id": "983a61b0-ae17-4e6b-8c82-1aac256598c2",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Demo_API",
+          "name": "APP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/easyapi~naukri-jobs-scraper/run-sync-get-dataset-items?token=YOUR_API_TOKEN",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer Demo_API"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"searchUrls\": [\n    {\n      \"url\": \"{{ $json.searchUrl }}\"\n    }\n  ],\n  \"maxItems\": 10\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1376,
+        48
+      ],
+      "id": "5d0f363d-7d43-4431-b544-ab607a14239b",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const skills = $json.skills || {};\nconst academics = $json.academic_details || [];\n\n/**\n * ✅ FIXED PRIMARY ROLE EXTRACTION\n * Handles:\n * - title as ARRAY\n * - title as STRING\n * - fallback safety\n */\nlet primaryRole = \"\";\n\nif (Array.isArray($json.title) && $json.title.length > 0) {\n  primaryRole = $json.title[0].trim();\n} else if (typeof $json.title === \"string\") {\n  primaryRole = $json.title.split(\"||\")[0].trim();\n} else {\n  primaryRole = \"\";\n}\n\n// derive experience (simple logic as discussed)\nconst startYear = 2023;\nconst currentYear = new Date().getFullYear();\nconst yearsOfExperience = currentYear - startYear;\n\n// derive education (latest / highest degree)\nconst education =\n  academics.length > 0\n    ? `${academics[0].degree}${\n        academics[0].specialization ? \" (\" + academics[0].specialization + \")\" : \"\"\n      } - ${academics[0].institution}`\n    : \"\";\n\nreturn [\n  {\n    json: {\n      name: $json.name,\n      primary_role: primaryRole,\n      years_of_experience: yearsOfExperience,\n      education,\n\n      programming_languages: (skills.programming_languages || []).join(\", \"),\n      data_science_machine_learning: (skills.data_science_skills || []).join(\", \"),\n      libraries_frameworks: (skills.libraries_frameworks || []).join(\", \"),\n      ui_frameworks: (skills.ui_frameworks || []).join(\", \"),\n      tools_platforms: (skills.tools_platforms || []).join(\", \"),\n      devops_deployment_tools: (skills.devops_deployment_tools || []).join(\", \"),\n      curriculum: (skills.curriculum || []).join(\", \"),\n\n      interests: ($json.interests || []).join(\" | \")\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -304
+      ],
+      "id": "5e9867f8-553b-4a2c-be0e-f55354515f08",
+      "name": "Flatten Skills for Sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  let url = item.json.jdURL || \"\";\n\n  // Ensure valid absolute URL for email\n  if (url && !url.startsWith(\"http\")) {\n    url = \"https://www.naukri.com\" + url;\n  }\n\n  return {\n    json: {\n      title: item.json.title,\n      company: item.json.company,\n      location: item.json.location || \"Not specified\",\n      experience: item.json.experience || \"Not specified\",\n      jdURL: url\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        -288
+      ],
+      "id": "a9fd9e77-9aad-4994-9902-175803cadcff",
+      "name": "FILTER GOOD JOBS"
+    },
+    {
+      "parameters": {
+        "sendTo": "example@email.com",
+        "subject": "=Top Job Matches Based on Your Resume\n",
+        "message": "=<h2>Top Job Matches Based on Your Resume</h2>\n<ul>\n{{ $items().map(job => `\n  <li style=\"margin-bottom:14px;\">\n    <b>Job:</b> ${job.json.title}<br/>\n    <b>Company:</b> ${job.json.company}<br/>\n    <b>Location:</b> ${job.json.location}<br/>\n    <b>Experience:</b> ${job.json.experience}<br/>\n    <a href=\"${job.json.jdURL}\" target=\"_blank\">View Job</a>\n  </li>\n`).join('') }}\n</ul>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1616,
+        -80
+      ],
+      "id": "67295678-9b88-47a7-b754-c199f64cbdd3",
+      "name": "Send a message",
+      "webhookId": "0e9de565-5377-4e11-a16d-bea61c77e28d",
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Fake id",
+          "name": "APP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  let url = item.json.jdURL || \"\";\n\n  // Ensure valid absolute URL for email\n  if (url && !url.startsWith(\"http\")) {\n    url = \"https://www.naukri.com\" + url;\n  }\n\n  return {\n    json: {\n      title: item.json.title,\n      company: item.json.company,\n      location: item.json.location || \"Not specified\",\n      experience: item.json.experience || \"Not specified\",\n      jdURL: url\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        -288
+      ],
+      "id": "daa7b189-da94-4f50-b04f-20f8dcc84da4",
+      "name": "Prepare Email Body"
+    },
+    {
+      "parameters": {
+        "jsCode": "const role = $json[\"Primary Role\"];\n\n// Convert \"Full Stack MERN Developer\" → \"full-stack-mern-developer\"\nconst slug = role\n  .toLowerCase()\n  .replace(/[^a-z0-9 ]/g, '')\n  .replace(/\\s+/g, '-');\n\nconst url = `https://www.naukri.com/${slug}-jobs`;\n\nreturn [\n  {\n    json: {\n      searchUrl: url\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        48
+      ],
+      "id": "c3e7cbba-734f-44e5-947b-aaca51410f49",
+      "name": "Resume parsing & Primary_role"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ✅ Get resume data from resume parsing node\nconst resume = $items(\"Code in JavaScript\")[0].json;\n\n// Normalize resume skills\nconst resumeSkills = (resume.programming_languages || \"\")\n  .toLowerCase()\n  .split(\",\")\n  .map(s => s.trim())\n  .filter(Boolean);\n\n// Optional role keywords boost\nconst roleKeywords = (resume.primary_role || \"\")\n  .toLowerCase()\n  .split(\" \")\n  .filter(w => w.length > 2);\n\nreturn items.map(item => {\n  const jdSkills = (item.json.tagsAndSkills || \"\")\n    .toLowerCase()\n    .split(\",\")\n    .map(s => s.trim())\n    .filter(Boolean);\n\n  // Skill matching\n  const matchedSkills = jdSkills.filter(s => resumeSkills.includes(s));\n\n  // Skill score (70%)\n  const skillScore = resumeSkills.length\n    ? (matchedSkills.length / resumeSkills.length) * 70\n    : 0;\n\n  // Role relevance score (30%)\n  const title = (item.json.title || \"\").toLowerCase();\n  const roleHits = roleKeywords.filter(k => title.includes(k)).length;\n  const roleScore = roleKeywords.length\n    ? (roleHits / roleKeywords.length) * 30\n    : 0;\n\n  const finalScore = Math.round(skillScore + roleScore);\n\n  return {\n    json: {\n      title: item.json.title,\n      company: item.json.companyName,\n      location: item.json.placeholders?.find(p => p.type === \"location\")?.label || \"\",\n      experience: item.json.placeholders?.find(p => p.type === \"experience\")?.label || \"\",\n      jdURL: item.json.jdURL?.startsWith(\"http\")\n        ? item.json.jdURL\n        : \"https://www.naukri.com\" + item.json.jdURL,\n      resumeRole: resume.primary_role\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        -288
+      ],
+      "id": "eebdbf66-68e0-4353-b4cf-44aa368d47fe",
+      "name": "Job Scoring"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Flatten Skills for Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Resume parsing & Primary_role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten Skills for Sheet": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Job Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FILTER GOOD JOBS": {
+      "main": [
+        [
+          {
+            "node": "Prepare Email Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email Body": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume parsing & Primary_role": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Scoring": {
+      "main": [
+        [
+          {
+            "node": "FILTER GOOD JOBS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "914cd36f-6662-42bd-9c2a-7657b6b8442a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "df2f9f769ba9d86a5b09945e5b59df76fdce39553a8be4a46cc51f4d2a95bd5f"
+  },
+  "id": "XhfFGJ55s1bK30TzBtQee",
+  "tags": []
+}
