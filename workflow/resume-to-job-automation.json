@@ -84,7 +84,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer Demo_API"
+              "value": "Bearer {{OPENROUTER_API_KEY}}"
             },
             {
               "name": "Content-Type",
@@ -343,7 +343,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer Demo_API"
+              "value": "Bearer {{OPENROUTER_API_KEY}}"
             }
           ]
         },
@@ -439,7 +439,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// ✅ Get resume data from resume parsing node\nconst resume = $items(\"Code in JavaScript\")[0].json;\n\n// Normalize resume skills\nconst resumeSkills = (resume.programming_languages || \"\")\n  .toLowerCase()\n  .split(\",\")\n  .map(s => s.trim())\n  .filter(Boolean);\n\n// Optional role keywords boost\nconst roleKeywords = (resume.primary_role || \"\")\n  .toLowerCase()\n  .split(\" \")\n  .filter(w => w.length > 2);\n\nreturn items.map(item => {\n  const jdSkills = (item.json.tagsAndSkills || \"\")\n    .toLowerCase()\n    .split(\",\")\n    .map(s => s.trim())\n    .filter(Boolean);\n\n  // Skill matching\n  const matchedSkills = jdSkills.filter(s => resumeSkills.includes(s));\n\n  // Skill score (70%)\n  const skillScore = resumeSkills.length\n    ? (matchedSkills.length / resumeSkills.length) * 70\n    : 0;\n\n  // Role relevance score (30%)\n  const title = (item.json.title || \"\").toLowerCase();\n  const roleHits = roleKeywords.filter(k => title.includes(k)).length;\n  const roleScore = roleKeywords.length\n    ? (roleHits / roleKeywords.length) * 30\n    : 0;\n\n  const finalScore = Math.round(skillScore + roleScore);\n\n  return {\n    json: {\n      title: item.json.title,\n      company: item.json.companyName,\n      location: item.json.placeholders?.find(p => p.type === \"location\")?.label || \"\",\n      experience: item.json.placeholders?.find(p => p.type === \"experience\")?.label || \"\",\n      jdURL: item.json.jdURL?.startsWith(\"http\")\n        ? item.json.jdURL\n        : \"https://www.naukri.com\" + item.json.jdURL,\n      resumeRole: resume.primary_role\n    }\n  };\n});\n"
+        "jsCode": "//  Get resume data from resume parsing node\nconst resume = $items(\"Code in JavaScript\")[0].json;\n\n// Normalize resume skills\nconst resumeSkills = (resume.programming_languages || \"\")\n  .toLowerCase()\n  .split(\",\")\n  .map(s => s.trim())\n  .filter(Boolean);\n\n// Optional role keywords boost\nconst roleKeywords = (resume.primary_role || \"\")\n  .toLowerCase()\n  .split(\" \")\n  .filter(w => w.length > 2);\n\nreturn items.map(item => {\n  const jdSkills = (item.json.tagsAndSkills || \"\")\n    .toLowerCase()\n    .split(\",\")\n    .map(s => s.trim())\n    .filter(Boolean);\n\n  // Skill matching\n  const matchedSkills = jdSkills.filter(s => resumeSkills.includes(s));\n\n  // Skill score (70%)\n  const skillScore = resumeSkills.length\n    ? (matchedSkills.length / resumeSkills.length) * 70\n    : 0;\n\n  // Role relevance score (30%)\n  const title = (item.json.title || \"\").toLowerCase();\n  const roleHits = roleKeywords.filter(k => title.includes(k)).length;\n  const roleScore = roleKeywords.length\n    ? (roleHits / roleKeywords.length) * 30\n    : 0;\n\n  const finalScore = Math.round(skillScore + roleScore);\n\n  return {\n    json: {\n      title: item.json.title,\n      company: item.json.companyName,\n      location: item.json.placeholders?.find(p => p.type === \"location\")?.label || \"\",\n      experience: item.json.placeholders?.find(p => p.type === \"experience\")?.label || \"\",\n      jdURL: item.json.jdURL?.startsWith(\"http\")\n        ? item.json.jdURL\n        : \"https://www.naukri.com\" + item.json.jdURL,\n      resumeRole: resume.primary_role\n    }\n  };\n});\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
