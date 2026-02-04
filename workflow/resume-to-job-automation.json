@@ -333,7 +333,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.apify.com/v2/acts/easyapi~naukri-jobs-scraper/run-sync-get-dataset-items?token=YOUR_API_TOKEN",
+        "url": "https://api.apify.com/v2/acts/easyapi~naukri-jobs-scraper/run-sync-get-dataset-items?token={{YOUR_API_TOKEN}}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -341,10 +341,6 @@
               "name": "Content-Type",
               "value": "application/json"
             },
-            {
-              "name": "Authorization",
-              "value": "Bearer {{OPENROUTER_API_KEY}}"
-            }
           ]
         },
         "sendBody": true,
